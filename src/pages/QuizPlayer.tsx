@@ -17,6 +17,8 @@ type Question = {
   answer: string;
   explanation: string | null;
   order_index: number;
+  options: string[] | null;
+  correct_option: number | null;
 };
 
 type Quiz = {
@@ -34,6 +36,7 @@ export default function QuizPlayer() {
   const [idx, setIdx] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -43,7 +46,7 @@ export default function QuizPlayer() {
       setQuiz(q);
       const { data: qs, error } = await supabase
         .from("questions")
-        .select("id, scenario, question_text, answer, explanation, order_index")
+        .select("id, scenario, question_text, answer, explanation, order_index, options, correct_option")
         .eq("quiz_id", q.id)
         .order("order_index");
       if (error) toast.error("Failed to load questions");
@@ -52,7 +55,7 @@ export default function QuizPlayer() {
     })();
   }, [slug]);
 
-  useEffect(() => { setShowAnswer(false); }, [idx]);
+  useEffect(() => { setShowAnswer(false); setSelected(null); }, [idx]);
 
   if (loading || authLoading) {
     return (<div className="min-h-screen"><Navbar /><div className="container py-10 text-muted-foreground">Loading...</div></div>);
@@ -114,7 +117,52 @@ export default function QuizPlayer() {
               <CardTitle className="mt-4 text-xl">{current.question_text}</CardTitle>
             </CardHeader>
             <CardContent>
-              {!showAnswer ? (
+              {Array.isArray(current.options) && current.options.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    {current.options.map((opt, i) => {
+                      const isCorrect = current.correct_option === i;
+                      const isSelected = selected === i;
+                      const revealed = selected !== null;
+                      const base = "w-full rounded-lg border p-3 text-left text-sm transition-colors";
+                      const cls = !revealed
+                        ? "border-border/60 bg-muted/20 hover:bg-muted/40"
+                        : isCorrect
+                          ? "border-success/50 bg-success/10"
+                          : isSelected
+                            ? "border-destructive/50 bg-destructive/10"
+                            : "border-border/40 bg-muted/10 opacity-70";
+                      return (
+                        <button
+                          key={i}
+                          disabled={revealed}
+                          onClick={() => setSelected(i)}
+                          className={`${base} ${cls}`}
+                        >
+                          <span className="mr-2 font-mono text-xs text-muted-foreground">{String.fromCharCode(65 + i)}.</span>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selected !== null && (
+                    <>
+                      <div className={`rounded-lg border p-4 ${selected === current.correct_option ? "border-success/30 bg-success/5" : "border-destructive/30 bg-destructive/5"}`}>
+                        <p className={`mb-2 text-xs font-semibold uppercase tracking-wide ${selected === current.correct_option ? "text-success" : "text-destructive"}`}>
+                          {selected === current.correct_option ? "Correct" : "Not quite"}
+                        </p>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed">{current.answer}</p>
+                      </div>
+                      {current.explanation && (
+                        <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-accent">Why it matters</p>
+                          <p className="whitespace-pre-wrap text-sm leading-relaxed">{current.explanation}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : !showAnswer ? (
                 <Button onClick={() => setShowAnswer(true)} className="w-full gradient-primary text-primary-foreground">
                   <Eye className="mr-2 h-4 w-4" /> Reveal answer
                 </Button>
