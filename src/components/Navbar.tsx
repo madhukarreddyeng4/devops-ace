@@ -19,7 +19,7 @@ export function Navbar() {
           <div className="grid h-9 w-9 place-items-center rounded-lg gradient-primary shadow-glow">
             <Cloud className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold tracking-tight">CloudPrep</span>
+          <span className="text-lg font-bold tracking-tight">MadhuOps</span>
           <span className="hidden text-xs text-muted-foreground sm:inline">AWS &amp; DevOps Interview Prep</span>
         </Link>
 

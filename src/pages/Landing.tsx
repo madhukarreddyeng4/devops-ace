@@ -100,7 +100,7 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} CloudPrep — AWS &amp; DevOps Interview Prep
+        © {new Date().getFullYear()} MadhuOps — AWS &amp; DevOps Interview Prep
       </footer>
     </div>
   );

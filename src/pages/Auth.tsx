@@ -69,7 +69,7 @@ export default function Auth() {
             <div className="grid h-10 w-10 place-items-center rounded-lg gradient-primary shadow-glow">
               <Cloud className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">CloudPrep</span>
+            <span className="text-xl font-bold">MadhuOps</span>
           </Link>
 
           <Card className="gradient-card border-border/60 shadow-card">
