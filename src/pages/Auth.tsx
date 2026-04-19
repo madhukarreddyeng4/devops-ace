@@ -51,13 +51,15 @@ export default function Auth() {
 
   const handleGoogle = async () => {
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (result.error) {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/quizzes` },
+    });
+    if (error) {
       setBusy(false);
-      return toast.error("Google sign-in failed");
+      return toast.error(error.message || "Google sign-in failed");
     }
-    if (result.redirected) return;
-    navigate("/quizzes");
+    // browser will redirect to Google
   };
 
   return (
