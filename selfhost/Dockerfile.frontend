@@ -3,7 +3,7 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --no-audit --no-fund
+RUN npm install --no-audit --no-fund --legacy-peer-deps
 COPY . .
 # Build with placeholder values; real values are swapped at container start.
 ENV VITE_SUPABASE_URL=__VITE_SUPABASE_URL__ \
