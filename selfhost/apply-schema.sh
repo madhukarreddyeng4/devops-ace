@@ -57,6 +57,8 @@ CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS \$\$
 CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS \$\$
   SELECT NULLIF(current_setting('request.jwt.claim.role', true), '');
 \$\$;
+ALTER FUNCTION auth.uid() OWNER TO supabase_auth_admin;
+ALTER FUNCTION auth.role() OWNER TO supabase_auth_admin;
 SQL
 
 echo "▶ Applying project migrations from ../supabase/migrations/…"
