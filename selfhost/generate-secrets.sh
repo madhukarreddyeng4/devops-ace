@@ -44,10 +44,10 @@ cat <<EOF
 # ──────────────────────────────────────────────────────────────────────
 
 # Public URL the browser hits for the API (Kong via host nginx)
-API_EXTERNAL_URL=https://api.madhuops.example.com
+API_EXTERNAL_URL=https://api-course.madhukarreddy.com
 
 # Public URL of the frontend
-SITE_URL=https://madhuops.example.com
+SITE_URL=https://course.madhukarreddy.com
 
 # Postgres
 POSTGRES_PASSWORD=${PG_PW}
@@ -62,8 +62,15 @@ RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
 
+# Google OAuth (optional). Leave GOOGLE_ENABLED=false for email/password only.
+# To enable: create an OAuth 2.0 Web client in Google Cloud Console, set
+#   Authorized redirect URI = \${API_EXTERNAL_URL}/auth/v1/callback
+GOOGLE_ENABLED=false
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
 # SMTP for auth confirmation emails (optional — leave blank to use auto-confirm)
-SMTP_ADMIN_EMAIL=admin@madhuops.example.com
+SMTP_ADMIN_EMAIL=admin@course.madhukarreddy.com
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
