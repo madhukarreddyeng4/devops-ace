@@ -51,14 +51,14 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authen
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
 
 -- auth.uid() / auth.role() helpers used by RLS
+SET ROLE supabase_auth_admin;
 CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS \$\$
   SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid;
 \$\$;
 CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS \$\$
   SELECT NULLIF(current_setting('request.jwt.claim.role', true), '');
 \$\$;
-ALTER FUNCTION auth.uid() OWNER TO supabase_auth_admin;
-ALTER FUNCTION auth.role() OWNER TO supabase_auth_admin;
+RESET ROLE;
 SQL
 
 echo "▶ Applying project migrations from ../supabase/migrations/…"
