@@ -49,7 +49,7 @@ export default function Pricing() {
         amount: data.amount,
         currency: data.currency,
         order_id: data.order_id,
-        name: "CloudPrep",
+        name: "MadhuOps",
         description: "AWS & DevOps Interview Prep — 1 year access",
         prefill: { email: user?.email ?? "" },
         theme: { color: "#f97316" },
