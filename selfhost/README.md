@@ -1,118 +1,108 @@
-# MadhuOps — Full self-host on a single EC2 box
+# MadhuOps — full EC2 self-host runbook
 
-Everything (Postgres, Auth, REST API, Edge Functions, frontend) runs as Docker containers on **one EC2 instance**, with a host-level nginx reverse proxy in front. Data lives in named Docker volumes so it survives container restarts and image rebuilds.
+Everything runs on **one EC2 box**. No Lovable Cloud, no external services.
 
 ## What you get
+- 6 Docker containers: Postgres • GoTrue (auth) • PostgREST • Kong (gateway) • Edge Runtime (functions) • React frontend (nginx)
+- Host-level nginx terminates TLS for `course.madhukarreddy.com` (frontend) and `api-course.madhukarreddy.com` (API)
+- Persistent data in named Docker volumes (`pg_data`, `storage_data`)
+- Daily DB backup cron, automatic SSL renewal
 
+---
+
+## 0. Prerequisites
+- AWS EC2 `t3.small` or larger, Ubuntu 22.04, 30 GB disk, Elastic IP attached
+- DNS A records for both domains pointing to the Elastic IP
+- (Optional) Google OAuth Web client with redirect URI `https://api-course.madhukarreddy.com/auth/v1/callback`
+- (Optional) Razorpay key id + secret + webhook secret
+
+## 1. Bootstrap the server (once)
+```bash
+ssh ubuntu@<elastic-ip>
+git clone https://github.com/<you>/<repo>.git ~/madhuops
+cd ~/madhuops
+sudo bash selfhost/bootstrap-ec2.sh
+exit                       # log out so docker group takes effect
+ssh ubuntu@<elastic-ip>
+cd ~/madhuops/selfhost
 ```
-                     ┌─────────────────── EC2 (Ubuntu 22.04) ───────────────────┐
-                     │                                                          │
-   internet ──443──► │  host nginx ──► :3000 (frontend container)               │
-                     │              ──► :8000 (kong → auth/rest/functions)      │
-                     │                                                          │
-                     │   docker network "madhuops"                              │
-                     │   ┌───────┐ ┌───────┐ ┌──────────┐ ┌──────┐ ┌────────┐   │
-                     │   │  db   │ │ auth  │ │ postgrest│ │ kong │ │  func  │   │
-                     │   └───┬───┘ └───┬───┘ └────┬─────┘ └──┬───┘ └────┬───┘   │
-                     │       │         │          │          │          │       │
-                     │   ┌───▼─────────▼──────────▼──────────▼──────────▼───┐   │
-                     │   │ named volume: pg_data (persistent)               │   │
-                     │   └──────────────────────────────────────────────────┘   │
-                     └──────────────────────────────────────────────────────────┘
+
+## 2. Generate secrets + edit .env
+```bash
+bash generate-secrets.sh > .env
+chmod 600 .env
+nano .env                  # fill RAZORPAY_*, optionally GOOGLE_*
+```
+`SITE_URL` and `API_EXTERNAL_URL` already point to your two domains.
+
+## 3. Start the database, apply schema
+```bash
+docker compose up -d db
+sleep 10
+bash apply-schema.sh       # creates roles, runs all migrations, attaches signup trigger
 ```
 
-## One-time setup on a fresh EC2
+## 4. (Optional) Migrate data from Lovable Cloud
+Get the **Session Pooler** connection string from Cloud → Settings → Database, then:
+```bash
+SOURCE_DB_URL='postgresql://postgres.<ref>:<pw>@<host>:5432/postgres' \
+  bash migrate-from-cloud.sh
+```
+Brings over `auth.users` + every `public.*` table.
 
-1. **Provision** Ubuntu 22.04, t3.medium minimum (4GB RAM), 30GB+ gp3 EBS, Elastic IP. Open ports **22** (your IP), **80**, **443** in the security group.
+## 5. Start the rest of the stack
+```bash
+docker compose up -d
+docker compose ps          # all 6 should be Up within ~30s
+```
 
-2. **Install Docker + nginx + jq:**
-   ```bash
-   sudo apt update
-   sudo apt install -y docker.io docker-compose-plugin nginx jq postgresql-client-15 git
-   sudo usermod -aG docker $USER && newgrp docker
-   sudo systemctl enable --now docker nginx
-   ```
+## 6. Configure host nginx + SSL
+```bash
+sudo cp nginx.conf /etc/nginx/sites-available/madhuops
+sudo ln -sf /etc/nginx/sites-available/madhuops /etc/nginx/sites-enabled/madhuops
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d course.madhukarreddy.com -d api-course.madhukarreddy.com
+```
+Certbot installs the cert and adds a cron timer for auto-renewal.
 
-3. **Clone this repo:**
-   ```bash
-   git clone https://github.com/YOUR_USER/YOUR_REPO.git madhuops
-   cd madhuops/selfhost
-   ```
+## 7. Smoke test
+```bash
+curl -I https://course.madhukarreddy.com
+curl https://api-course.madhukarreddy.com/auth/v1/health
+```
+Open `https://course.madhukarreddy.com`, sign up, verify a row appears in `public.profiles`.
 
-4. **Generate secrets:**
-   ```bash
-   bash generate-secrets.sh > .env
-   # Review .env — set DOMAIN, SITE_URL, RAZORPAY_* values
-   nano .env
-   ```
+## 8. Daily backup cron
+```bash
+chmod +x ~/madhuops/selfhost/backup-db.sh
+( crontab -l 2>/dev/null; echo "15 2 * * * /home/ubuntu/madhuops/selfhost/backup-db.sh >> /home/ubuntu/backup.log 2>&1" ) | crontab -
+```
+Backups land in `~/madhuops/selfhost/backups/` as gzipped SQL.
 
-5. **Bring the stack up:**
-   ```bash
-   docker compose up -d
-   docker compose logs -f db    # wait for "database system is ready to accept connections"
-   ```
+---
 
-6. **Apply schema** (this repo's migrations are the source of truth):
-   ```bash
-   bash apply-schema.sh
-   ```
-
-7. **(Optional) Migrate data from Lovable Cloud:**
-   ```bash
-   # Get the SOURCE_DB_URL from Lovable: Cloud → Settings → Database → Connection string (Session pooler)
-   SOURCE_DB_URL='postgresql://postgres.<ref>:<password>@<host>:5432/postgres' \
-   bash migrate-from-cloud.sh
-   ```
-
-8. **Install host nginx config:**
-   ```bash
-   sudo cp nginx.conf /etc/nginx/sites-available/madhuops
-   sudo ln -sf /etc/nginx/sites-available/madhuops /etc/nginx/sites-enabled/madhuops
-   sudo rm -f /etc/nginx/sites-enabled/default
-   # Edit the file: replace madhuops.example.com with your real domain
-   sudo nano /etc/nginx/sites-available/madhuops
-   sudo nginx -t && sudo systemctl reload nginx
-   ```
-
-9. **HTTPS with Let's Encrypt:**
-   ```bash
-   sudo apt install -y certbot python3-certbot-nginx
-   sudo certbot --nginx -d madhuops.example.com -d api.madhuops.example.com
-   ```
-
-10. **Point Razorpay webhook** at `https://api.madhuops.example.com/functions/v1/razorpay-webhook`. Set the signing secret to the value of `RAZORPAY_WEBHOOK_SECRET` in `.env`.
-
-11. **Make yourself admin** (after signing up):
-    ```bash
-    docker compose exec db psql -U postgres -d postgres -c \
-      "INSERT INTO public.user_roles (user_id, role) SELECT id, 'admin' FROM auth.users WHERE email='you@example.com';"
-    ```
-
-## Day-to-day
+## Day-2 operations
 
 | Task | Command |
 |---|---|
-| Status | `docker compose ps` |
-| Logs (one service) | `docker compose logs -f auth` |
-| Restart everything | `docker compose restart` |
-| Update frontend after `git pull` | `docker compose up -d --build frontend` |
-| psql shell | `docker compose exec db psql -U postgres` |
-| Backup DB | `bash backup-db.sh` |
+| Deploy new code | `bash selfhost/deploy.sh` |
+| View logs | `docker compose logs -f <service>` |
+| Restart one service | `docker compose restart auth` |
 | Stop everything | `docker compose down` (data persists) |
-| **Wipe everything (destructive)** | `docker compose down -v` |
+| WIPE everything | `docker compose down -v` ⚠ destroys DB |
+| psql into DB | `docker compose exec db psql -U postgres` |
+| Promote a user to admin | `docker compose exec db psql -U postgres -c "INSERT INTO public.user_roles (user_id, role) SELECT id, 'admin' FROM auth.users WHERE email='you@example.com' ON CONFLICT DO NOTHING;"` |
 
-## Files
+## Cost estimate (Mumbai)
+- t3.small on-demand: ~$15/mo (or ~$9/mo with 1-yr reserved)
+- 30 GB gp3: ~$2.50/mo
+- Elastic IP (attached): free
+- Bandwidth: first 100 GB/mo free, then $0.09/GB
+- **Total: ~$18/mo**
 
-- `docker-compose.yml` — full stack: db, auth, postgrest, kong, edge-functions, frontend
-- `kong.yml` — Kong declarative config (routes /auth, /rest, /functions)
-- `nginx.conf` — host nginx reverse proxy (frontend + api subdomain)
-- `generate-secrets.sh` — produces a fresh `.env` with strong passwords + JWT keys
-- `apply-schema.sh` — runs every migration in `../supabase/migrations/` against the local DB
-- `migrate-from-cloud.sh` — `pg_dump` from Lovable Cloud → restore into local DB
-- `backup-db.sh` — daily `pg_dump` to `./backups/` (wire to cron + S3 sync as you wish)
-- `Dockerfile.frontend` — frontend image build (uses runtime env injection)
-- `entrypoint-frontend.sh` — injects `VITE_*` env into the static build at container start
-
-## Trade-offs vs Lovable Cloud
-
-You now own: backups, OS patching, certificate renewal, scaling, monitoring, security incident response. **Budget at least 4 hours/month** of ops time even when nothing is broken. This is fine if you specifically want full data ownership; otherwise Lovable Cloud + EC2 frontend (Path 1 in `DEPLOY.md`) is dramatically less work for the same UX.
+## Troubleshooting
+- **Auth restart loop** → `docker compose logs auth`. Usually missing role; re-run `bash apply-schema.sh`.
+- **Frontend blank page** → `__VITE_*` placeholders weren't substituted. Check `docker compose logs frontend`.
+- **502 Bad Gateway** → Kong (`:8000`) down: `docker compose ps`, then `docker compose logs kong`.
+- **Google login fails** → `GOOGLE_ENABLED=true` but creds wrong, or Google Console redirect URI doesn't exactly match `https://api-course.madhukarreddy.com/auth/v1/callback`.
