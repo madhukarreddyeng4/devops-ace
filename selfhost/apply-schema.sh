@@ -62,6 +62,15 @@ for f in ../supabase/migrations/*.sql; do
     psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$f"
 done
 
+echo "▶ Attaching auth.users → public.handle_new_user trigger…"
+$PSQL <<'SQL'
+-- Fires on every new auth signup (email + OAuth) so profiles + user_roles get a row.
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+SQL
+
 echo "▶ Reloading PostgREST schema cache"
 $PSQL -c "NOTIFY pgrst, 'reload schema';" || true
 
