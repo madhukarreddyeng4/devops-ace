@@ -37,6 +37,11 @@ CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION supabase_auth_admin;
 CREATE SCHEMA IF NOT EXISTS storage;
 CREATE SCHEMA IF NOT EXISTS extensions;
 
+-- Ensure GoTrue owns auth schema even if it pre-existed under postgres
+ALTER SCHEMA auth OWNER TO supabase_auth_admin;
+GRANT ALL ON SCHEMA auth TO supabase_auth_admin;
+GRANT USAGE, CREATE ON SCHEMA public TO supabase_auth_admin;
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
 
@@ -52,6 +57,8 @@ CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS \$\$
 CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS \$\$
   SELECT NULLIF(current_setting('request.jwt.claim.role', true), '');
 \$\$;
+ALTER FUNCTION auth.uid() OWNER TO supabase_auth_admin;
+ALTER FUNCTION auth.role() OWNER TO supabase_auth_admin;
 SQL
 
 echo "▶ Applying project migrations from ../supabase/migrations/…"
