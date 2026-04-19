@@ -14,16 +14,301 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          icon: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          access_expires_at: string | null
+          amount_paise: number
+          created_at: string
+          currency: string
+          id: string
+          notes: Json | null
+          razorpay_order_id: string
+          razorpay_payment_id: string | null
+          razorpay_signature: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_expires_at?: string | null
+          amount_paise: number
+          created_at?: string
+          currency?: string
+          id?: string
+          notes?: Json | null
+          razorpay_order_id: string
+          razorpay_payment_id?: string | null
+          razorpay_signature?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_expires_at?: string | null
+          amount_paise?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          notes?: Json | null
+          razorpay_order_id?: string
+          razorpay_payment_id?: string | null
+          razorpay_signature?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      questions: {
+        Row: {
+          answer: string
+          correct_option: number | null
+          created_at: string
+          explanation: string | null
+          id: string
+          options: Json | null
+          order_index: number
+          question_text: string
+          question_type: Database["public"]["Enums"]["question_type"]
+          quiz_id: string
+          scenario: string | null
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          correct_option?: number | null
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          options?: Json | null
+          order_index?: number
+          question_text: string
+          question_type?: Database["public"]["Enums"]["question_type"]
+          quiz_id: string
+          scenario?: string | null
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          correct_option?: number | null
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          options?: Json | null
+          order_index?: number
+          question_text?: string
+          question_type?: Database["public"]["Enums"]["question_type"]
+          quiz_id?: string
+          scenario?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_attempts: {
+        Row: {
+          answers: Json | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          quiz_id: string
+          score: number | null
+          total_questions: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answers?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          quiz_id: string
+          score?: number | null
+          total_questions?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          quiz_id?: string
+          score?: number | null
+          total_questions?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quizzes: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          display_order: number
+          estimated_minutes: number | null
+          id: string
+          is_published: boolean
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          display_order?: number
+          estimated_minutes?: number | null
+          id?: string
+          is_published?: boolean
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          display_order?: number
+          estimated_minutes?: number | null
+          id?: string
+          is_published?: boolean
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_active_access: { Args: { _user_id: string }; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      difficulty_level: "beginner" | "intermediate" | "advanced"
+      payment_status: "created" | "paid" | "failed" | "refunded"
+      question_type: "scenario" | "mcq"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +435,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      difficulty_level: ["beginner", "intermediate", "advanced"],
+      payment_status: ["created", "paid", "failed", "refunded"],
+      question_type: ["scenario", "mcq"],
+    },
   },
 } as const
